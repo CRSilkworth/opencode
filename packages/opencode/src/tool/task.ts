@@ -76,6 +76,7 @@ export const TaskTool = Tool.define("task", async (ctx) => {
           parentID: ctx.sessionID,
           title: params.description + ` (@${agent.name} subagent)`,
           permission: [
+            ...(agent.permission ?? []),             // agent-specific permissions from opencode.json
             ...(hasTodoWritePermission
               ? []
               : [
