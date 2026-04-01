@@ -85,6 +85,25 @@ export const PlanEnterTool = Tool.define("plan_enter", {
     const plan = path.relative(Instance.worktree, Session.plan(session))
 
     const targetAgent = params.agent ?? "startup-agent"
+    const answers = await Question.ask({
+      sessionID: ctx.sessionID,
+      questions: [
+        {
+          question: `Would you like to switch to planning mode?`,
+          header: "Plan Mode",
+          custom: false,
+          options: [
+            { label: "Yes", description: "Switch to planning agent" },
+            { label: "No", description: "Stay here and continue" },
+          ],
+        },
+      ],
+      tool: ctx.callID ? { messageID: ctx.messageID, callID: ctx.callID } : undefined,
+    })
+
+    const answer = answers[0]?.[0]
+    if (answer === "No") throw new Question.RejectedError()
+
     const model = await getLastModel(ctx.sessionID)
 
     const userMsg: MessageV2.User = {
