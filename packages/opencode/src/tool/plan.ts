@@ -8,7 +8,6 @@ import { Provider } from "../provider/provider"
 import { Instance } from "../project/instance"
 import { type SessionID, MessageID, PartID } from "../session/schema"
 import EXIT_DESCRIPTION from "./plan-exit.txt"
-import ENTER_DESCRIPTION from "./plan-enter.txt"
 
 async function getLastModel(sessionID: SessionID) {
   for await (const item of MessageV2.stream(sessionID)) {
@@ -19,22 +18,20 @@ async function getLastModel(sessionID: SessionID) {
 
 export const PlanExitTool = Tool.define("plan_exit", {
   description: EXIT_DESCRIPTION,
-  parameters: z.object({
-    agent: z.string().optional().default("main"),
-  }),
-  async execute(params, ctx) {
+  parameters: z.object({}),
+  async execute(_params, ctx) {
     const session = await Session.get(ctx.sessionID)
     const plan = path.relative(Instance.worktree, Session.plan(session))
     const answers = await Question.ask({
       sessionID: ctx.sessionID,
       questions: [
         {
-          question: `Plan at ${plan} is complete. Would you like to start building?`,
-          header: "Start Building",
+          question: `Plan at ${plan} is complete. Would you like to switch to the build agent and start implementing?`,
+          header: "Build Agent",
           custom: false,
           options: [
-            { label: "Yes", description: "Switch to the main agent and start implementing the plan" },
-            { label: "No", description: "Stay in plan mode to continue refining the plan" },
+            { label: "Yes", description: "Switch to build agent and start implementing the plan" },
+            { label: "No", description: "Stay with plan agent to continue refining the plan" },
           ],
         },
       ],
@@ -46,7 +43,6 @@ export const PlanExitTool = Tool.define("plan_exit", {
 
     const model = await getLastModel(ctx.sessionID)
 
-    const targetAgent = params.agent ?? "main"
     const userMsg: MessageV2.User = {
       id: MessageID.ascending(),
       sessionID: ctx.sessionID,
@@ -54,7 +50,7 @@ export const PlanExitTool = Tool.define("plan_exit", {
       time: {
         created: Date.now(),
       },
-      agent: targetAgent,
+      agent: "build",
       model,
     }
     await Session.updateMessage(userMsg)
@@ -63,38 +59,36 @@ export const PlanExitTool = Tool.define("plan_exit", {
       messageID: userMsg.id,
       sessionID: ctx.sessionID,
       type: "text",
-      text: `The plan at ${plan} has been approved. Execute the plan`,
+      text: `The plan at ${plan} has been approved, you can now edit files. Execute the plan`,
       synthetic: true,
     } satisfies MessageV2.TextPart)
 
     return {
-      title: "Switching to main agent",
-      output: "User approved the plan. Wait for further instructions.",
+      title: "Switching to build agent",
+      output: "User approved switching to build agent. Wait for further instructions.",
       metadata: {},
     }
   },
 })
 
+/*
 export const PlanEnterTool = Tool.define("plan_enter", {
   description: ENTER_DESCRIPTION,
-  parameters: z.object({
-    agent: z.string().optional().default("startup-agent"),
-  }),
-  async execute(params, ctx) {
+  parameters: z.object({}),
+  async execute(_params, ctx) {
     const session = await Session.get(ctx.sessionID)
     const plan = path.relative(Instance.worktree, Session.plan(session))
 
-    const targetAgent = params.agent ?? "startup-agent"
     const answers = await Question.ask({
       sessionID: ctx.sessionID,
       questions: [
         {
-          question: `Would you like to switch to planning mode?`,
+          question: `Would you like to switch to the plan agent and create a plan saved to ${plan}?`,
           header: "Plan Mode",
           custom: false,
           options: [
-            { label: "Yes", description: "Switch to planning agent" },
-            { label: "No", description: "Stay here and continue" },
+            { label: "Yes", description: "Switch to plan agent for research and planning" },
+            { label: "No", description: "Stay with build agent to continue making changes" },
           ],
         },
       ],
@@ -102,6 +96,7 @@ export const PlanEnterTool = Tool.define("plan_enter", {
     })
 
     const answer = answers[0]?.[0]
+
     if (answer === "No") throw new Question.RejectedError()
 
     const model = await getLastModel(ctx.sessionID)
@@ -113,7 +108,7 @@ export const PlanEnterTool = Tool.define("plan_enter", {
       time: {
         created: Date.now(),
       },
-      agent: targetAgent,
+      agent: "plan",
       model,
     }
     await Session.updateMessage(userMsg)
@@ -122,14 +117,15 @@ export const PlanEnterTool = Tool.define("plan_enter", {
       messageID: userMsg.id,
       sessionID: ctx.sessionID,
       type: "text",
-      text: `User has requested planning mode. The plan file will be at ${plan}. Begin the discovery conversation.`,
+      text: "User has requested to enter plan mode. Switch to plan mode and begin planning.",
       synthetic: true,
     } satisfies MessageV2.TextPart)
 
     return {
-      title: `Switching to ${targetAgent}`,
-      output: `User confirmed planning mode. A new message has been created. The plan file will be at ${plan}.`,
+      title: "Switching to plan agent",
+      output: `User confirmed to switch to plan mode. A new message has been created to switch you to plan mode. The plan file will be at ${plan}. Begin planning.`,
       metadata: {},
     }
   },
 })
+*/
