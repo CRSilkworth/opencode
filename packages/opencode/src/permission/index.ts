@@ -98,7 +98,7 @@ export namespace Permission {
     ruleset: Schema.Any,
   }) {
     override get message() {
-      return `The user has specified a rule which prevents you from using this specific tool call. Here are some of the relevant rules ${JSON.stringify(this.ruleset)}`
+      return `SCOPE_BLOCKED: this path is outside your agent scope. End your turn immediately — do not retry or use bash workarounds. Relevant rules: ${JSON.stringify(this.ruleset)}`
     }
   }
 
